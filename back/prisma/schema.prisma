@@ -1,0 +1,165 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String  @id @default(cuid())
+  email      String  @unique
+  name       String
+  surname    String
+  password   String
+  phone      String? @unique
+  patronymic String?
+  birthday   String
+  gender     String
+  favouriteItems FavouriteItem[]
+  cartItems  CartItem[]
+  orders     Order[]
+  transactions Transaction[]
+
+  verificationToken String? @default(cuid()) @map("verification_token")
+
+  rights Role[] @default([USER])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  title       String
+  price       Float
+  description String
+  images      String[]
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
+  quantity    Int
+  rating      Float    @default(0)
+  cartItems   CartItem[]
+  favouriteItems FavouriteItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  OrderItem   OrderItem[]
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  quantity  Int      @default(1)
+  selected  Boolean  @default(true)
+  userId    String
+  productId Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
+}
+
+model FavouriteItem {
+  id        Int      @id @default(autoincrement())
+  quantity  Int      @default(1)
+  selected  Boolean  @default(true)
+  userId    String
+  productId Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
+}
+
+model Order {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  status OrderStatus @default(PENDING)
+  total  Float
+  email  String
+
+  items OrderItem[]
+
+  transaction Transaction?
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String? @map("user_id")
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  quantity Int
+  price    Float
+
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String @map("order_id")
+
+  product   Product @relation(fields: [productId], references: [id])
+  productId Int     @map("product_id")
+
+  @@map("order_items")
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  paymentId     String  @unique @map("payment_id")
+  paymentMethod String? @map("payment_method")
+
+  amount Float
+
+  status TransactionStatus @default(PENDING)
+
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String @unique @map("order_id")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  @@map("transactions")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  FAILED
+}

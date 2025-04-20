@@ -1,8 +1,8 @@
-import { FC, useState, useEffect, useContext } from 'react';
+import { FC, useContext, useEffect, useState } from 'react';
+import { Context } from '../../../main';
+import { AddToCartDto } from '../../../models/cart/AddToCartDto';
 import { IProductCardProps } from '../../../models/product/IProductCardProps';
 import CartService from '../../../services/CartService';
-import { AddToCartDto } from '../../../models/cart/AddToCartDto';
-import { Context } from '../../../main';
 import FavoritesService from '../../../services/FavouritesService';
 import StarRating from '../starRating';
 
@@ -63,32 +63,38 @@ const ProductCard: FC<IProductCardProps> = ({ product }) => {
   const heartIcon = isFavorite ? '/images/heart_red.svg' : '/images/heart_gray.svg';
 
   return (
-    <div className="border border-gray-200 rounded-lg p-2 shadow-md relative">
+    <div className='border border-gray-200 rounded-lg p-2 shadow-md relative w-full max-w-sm mx-auto'>
       {/* Иконка избранного */}
-      <button onClick={toggleFavorite} className="absolute top-3 right-3">
-        <img src={heartIcon} alt="Избранное" className="w-6 h-6 b-point" />
+      <button onClick={toggleFavorite} className='absolute top-3 right-3 z-10'>
+        <img src={heartIcon} alt='Избранное' className='w-6 h-6 b-point' />
       </button>
 
       {/* Изображение товара */}
-      <div className="h-[300px] w-[280px] flex justify-center items-center overflow-hidden mb-3">
-        <img src={mainImage} alt={product.title} className="w-full h-full object-cover rounded-md" />
+      <div className='aspect-square w-full relative mb-3'>
+        <div className='absolute inset-0 flex items-center justify-center'>
+          <img src={mainImage} alt={product.title} className='max-w-full max-h-full object-contain rounded-md' />
+        </div>
       </div>
 
       <StarRating rating={4} />
 
       {/* Информация о товаре */}
-      <p className="text-[16px] font-semibold truncate">{product.title}, <span className='text-gray-500'>{displayArt}</span></p>
-      <div className='flex justify-between'>
-        <p className="text-[24px] font-semibold mt-1">{product.price} ₽ / шт</p>
-        <p className="text-green-600 mt-1 text-center flex items-center">В наличии</p>
+      <div className='space-y-2'>
+        <p className='text-[16px] font-semibold truncate'>
+          {product.title}, <span className='text-gray-500'>{displayArt}</span>
+        </p>
+        <div className='flex justify-between items-center flex-wrap gap-2'>
+          <p className='text-[24px] font-semibold'>{product.price} ₽ / шт</p>
+          <p className='text-green-600 text-sm flex items-center whitespace-nowrap'>В наличии</p>
+        </div>
       </div>
 
       <button
         onClick={handleAddToCart}
-        className="b-point border border-secondary font-semibold w-full flex justify-between px-5 text-secondary py-3 mt-4 rounded-[4px] hover:bg-secondary hover:text-white transition"
+        className='b-point border border-secondary font-medium w-full flex justify-between items-center px-3 text-secondary py-2 mt-4 rounded-[4px] hover:bg-secondary hover:text-white transition text-[13px]'
       >
-        Добавить в корзину
-        <img src="/images/cart.svg" alt="" className='w-[20px]'/>
+        <span className='text-lg'>Добавить в корзину</span>
+        <img src='/images/cart.svg' alt='корзина' className='w-4 h-4' />
       </button>
     </div>
   );

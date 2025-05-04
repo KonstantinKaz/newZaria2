@@ -15,6 +15,7 @@ import CatalogPage from '../screens/catalogPage/CatalogPage';
 import CategoryPage from '../screens/categoryPage/CategoryPage';
 import CartPage from '../screens/cart/CartPage';
 import FavoritesPage from '../screens/favorite/FavouritePage';
+import About from '../screens/about/About'
 // import Login from './../screens/login/Login';
 // import AdminPage from './../screens/adminPage/AdminPage';
 
@@ -40,6 +41,7 @@ const Router = () => {
                 <Route index element={<Home />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="delivery" element={<Delivery />} />
+                <Route path="about" element={<About />} />
                 <Route path="auth/login" element={<Login />} />
                 <Route path="auth/register" element={<Register />} />
                 <Route path="catalog" element={<CatalogPage />} />

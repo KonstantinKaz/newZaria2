@@ -1,11 +1,15 @@
+import { AxiosError } from 'axios';
 import { makeAutoObservable } from 'mobx';
-import AuthService from '../services/AuthService';
+import { CartResponseDto } from '../models/cart/CartResponseDto';
 import { IUser } from '../models/IUser';
+import AuthService from '../services/AuthService';
+import CartService from '../services/CartService';
 
 class Store {
   user: IUser | null = null;
   isAuth = false;
   isLoading = false;
+  cart: CartResponseDto | null = null;
 
   constructor() {
     makeAutoObservable(this);
@@ -24,23 +28,49 @@ class Store {
     this.isLoading = loading;
   }
 
+  setCart(cart: CartResponseDto | null) {
+    this.cart = cart;
+  }
+
+  async fetchCart() {
+    try {
+      const data = await CartService.getCart();
+      this.setCart(data);
+    } catch (error) {
+      console.error('Ошибка при загрузке корзины:', error);
+      this.setCart(null);
+    }
+  }
+
   async login(email: string, password: string) {
     try {
       const response = await AuthService.login(email, password);
       this.setAuth(true);
       this.setUser(response.user);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка входа');
+      await this.fetchCart(); // Загружаем корзину после входа
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError;
+      throw new Error(axiosError.response?.data?.message || 'Ошибка входа');
     }
   }
 
-  async register(data: { name: string; surname: string; patronymic?: string; email: string; gender?: string; birthday: string; password: string }) {
+  async register(data: {
+    name: string;
+    surname: string;
+    patronymic?: string;
+    email: string;
+    gender?: string;
+    birthday: string;
+    password: string;
+  }) {
     try {
       const response = await AuthService.register(data);
       this.setAuth(true);
       this.setUser(response.user);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка регистрации');
+      await this.fetchCart(); // Загружаем корзину после регистрации
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError;
+      throw new Error(axiosError.response?.data?.message || 'Ошибка регистрации');
     }
   }
 
@@ -48,6 +78,7 @@ class Store {
     AuthService.logout();
     this.setAuth(false);
     this.setUser(null);
+    this.setCart(null);
   }
 
   async getProfile() {
@@ -60,10 +91,12 @@ class Store {
       const user = await AuthService.getProfile();
       this.setUser(user);
       this.setAuth(true);
-    } catch (error: any) {
+      await this.fetchCart(); // Загружаем корзину после получения профиля
+    } catch (error: unknown) {
       console.error('Ошибка при загрузке профиля:', error);
       this.setAuth(false);
       this.setUser(null);
+      this.setCart(null);
     } finally {
       this.setLoading(false);
     }
@@ -74,9 +107,11 @@ class Store {
       const response = await AuthService.checkAuth();
       this.setAuth(true);
       this.setUser(response.user);
-    } catch (error) {
+      await this.fetchCart(); // Загружаем корзину после проверки авторизации
+    } catch (error: unknown) {
       this.setAuth(false);
       this.setUser(null);
+      this.setCart(null);
     }
   }
 

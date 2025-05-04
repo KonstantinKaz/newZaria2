@@ -242,8 +242,12 @@ const CartPage: React.FC = () => {
           <div className='border rounded p-4 w-full lg:w-64 mt-8 lg:mt-0 lg:h-[150px]'>
             <div className='mb-2 text-sm text-gray-600'>Выбрано товаров: {totalSelectedQuantity}</div>
             <div className='mb-4 font-semibold text-xl'>{totalSelectedPrice}₽</div>
-            <button className='bg-secondary b-point text-white w-full py-2 rounded hover:bg-secondary-dark'>
-              Оформить заказ
+            <button
+              onClick={() => navigate('/checkout')}
+              className='bg-secondary b-point text-white w-full py-2 rounded hover:bg-secondary-dark disabled:opacity-50 disabled:cursor-not-allowed'
+              disabled={totalSelectedQuantity === 0}
+            >
+              {totalSelectedQuantity === 0 ? 'Выберите товары' : 'Оформить заказ'}
             </button>
           </div>
         </div>

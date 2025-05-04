@@ -1,12 +1,14 @@
-import { IsArray, IsEmail, IsNumber } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+	IsEmail,
+	IsOptional,
+	IsString
+} from 'class-validator'
 
 export class CreateOrderDto {
-  @IsArray()
-  @IsNumber({}, { each: true })
-  @Type(() => Number)
-  cartItemIds: number[];
+	@IsEmail()
+	email: string
 
-  @IsEmail()
-  email: string;
-} 
+	@IsString()
+	@IsOptional()
+	promocodeId?: string
+}

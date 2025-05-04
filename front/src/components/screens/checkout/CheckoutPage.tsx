@@ -29,19 +29,22 @@ const CheckoutPage: React.FC = () => {
   const selectedItems = store.cart?.items.filter((item) => item.selected) || [];
   const totalPrice = selectedItems.reduce((sum, item) => sum + item.quantity * item.product.price, 0);
 
+  // Расчет скидки, если есть промокод
+  const discount = store.cart?.promocode ? (totalPrice * store.cart.promocode.discount) / 100 : 0;
+  const finalPrice = totalPrice - discount;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       setLoading(true);
-      const cartItemIds = selectedItems.map((item) => item.id);
-
-      if (cartItemIds.length === 0) {
+      if (selectedItems.length === 0) {
         alert('Пожалуйста, выберите товары для заказа');
         return;
       }
 
-      const { data: order } = await OrderService.createOrder(cartItemIds, store.user!.email);
+      const { data: order } = await OrderService.createOrder(store.user!.email, store.cart?.promocode?.id);
+
       await store.fetchCart(); // Обновляем корзину после создания заказа
       navigate(`/order-success/${order.id}`);
     } catch (error: any) {
@@ -115,15 +118,33 @@ const CheckoutPage: React.FC = () => {
           </div>
 
           <div className='border-t pt-4'>
-            <div className='flex justify-between items-center mb-4'>
-              <span className='text-lg'>Итого к оплате:</span>
-              <span className='text-xl font-semibold'>{totalPrice}₽</span>
+            <div className='space-y-2'>
+              <div className='flex justify-between items-center'>
+                <span className='text-gray-600'>Сумма:</span>
+                <span>{totalPrice}₽</span>
+              </div>
+
+              {store.cart.promocode && (
+                <div className='flex justify-between items-center text-green-600'>
+                  <span>Скидка ({store.cart.promocode.discount}%):</span>
+                  <span>-{discount}₽</span>
+                </div>
+              )}
+
+              <div className='flex justify-between items-center text-lg font-semibold'>
+                <span>Итого к оплате:</span>
+                <span>{finalPrice}₽</span>
+              </div>
+
+              {store.cart.promocode && (
+                <div className='text-sm text-green-600 mt-2'>Применен промокод: {store.cart.promocode.code}</div>
+              )}
             </div>
 
             <button
               type='submit'
               disabled={loading || selectedItems.length === 0}
-              className='w-full bg-secondary text-white py-3 rounded-md hover:bg-secondary-dark transition-colors disabled:opacity-50'
+              className='w-full bg-secondary text-white py-3 rounded-md hover:bg-secondary-dark transition-colors disabled:opacity-50 mt-4'
             >
               {loading ? 'Оформление...' : 'Оформить заказ'}
             </button>

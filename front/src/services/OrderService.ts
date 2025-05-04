@@ -1,5 +1,6 @@
 import { AxiosResponse } from 'axios';
 import $api from '../http';
+import { IPromocode } from '../store/cart/cart.types';
 
 export interface OrderItem {
   id: number;
@@ -20,16 +21,17 @@ export interface Order {
   email: string;
   items: OrderItem[];
   createdAt: string;
+  promocode?: IPromocode;
 }
 
 export interface CreateOrderDto {
-  cartItemIds: number[];
   email: string;
+  promocodeId?: string;
 }
 
 export default class OrderService {
-  static async createOrder(cartItemIds: number[], email: string): Promise<AxiosResponse<Order>> {
-    const dto: CreateOrderDto = { cartItemIds, email };
+  static async createOrder(email: string, promocodeId?: string): Promise<AxiosResponse<Order>> {
+    const dto: CreateOrderDto = { email, promocodeId };
     return $api.post<Order>('/orders', dto);
   }
 

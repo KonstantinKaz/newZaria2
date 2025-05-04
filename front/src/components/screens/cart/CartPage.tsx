@@ -1,22 +1,30 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { useActions } from '../../../hooks/useActions';
 
 import { CartResponseDto } from '../../../models/cart/CartResponseDto';
 import { RemoveFromCartDto } from '../../../models/cart/RemoveFromCartDto';
 import { UpdateSelectionDto } from '../../../models/cart/UpdateSelectionDto';
 
 import CartService from '../../../services/CartService';
+import { PromocodeService } from '../../../services/promocode.service';
 
 import { Context } from '../../../main';
 
 const CartPage: React.FC = () => {
   const [cart, setCart] = useState<CartResponseDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
   const { store } = useContext(Context);
   const navigate = useNavigate();
+  const { applyPromocode } = useActions();
 
   useEffect(() => {
+    console.log('Auth state:', { isAuth: store.isAuth, user: store.user });
     if (!store.isAuth) {
+      console.log('User not authenticated, redirecting to login');
       navigate('/auth/login');
       return;
     }
@@ -26,7 +34,9 @@ const CartPage: React.FC = () => {
   const fetchCart = async () => {
     try {
       setLoading(true);
+      console.log('Fetching cart data...');
       const data = await CartService.getCart();
+      console.log('Cart data received:', data);
       setCart(data);
     } catch (error) {
       console.error('Ошибка при загрузке корзины', error);
@@ -111,10 +121,38 @@ const CartPage: React.FC = () => {
     }
   };
 
+  const handleApplyPromoCode = async () => {
+    if (!promoCode.trim()) return;
+
+    try {
+      setPromoError(null);
+      const { data: promocode } = await PromocodeService.validate(promoCode);
+      console.log('Validated promocode:', promocode);
+      setPromoDiscount(promocode.discount);
+      applyPromocode(promocode);
+      setPromoError(null);
+
+      // Обновляем корзину после применения промокода
+      await fetchCart();
+    } catch (error) {
+      console.error('Promocode validation error:', error);
+      setPromoDiscount(null);
+      if (error.response?.status === 404) {
+        const message = error.response?.data?.message || 'Промокод не найден';
+        setPromoError(message);
+      } else {
+        setPromoError('Ошибка при проверке промокода');
+      }
+    }
+  };
+
   const totalSelectedQuantity = cart?.items.reduce((sum, it) => (it.selected ? sum + it.quantity : sum), 0) || 0;
 
   const totalSelectedPrice =
     cart?.items.reduce((sum, it) => (it.selected ? sum + it.quantity * it.product.price : sum), 0) || 0;
+
+  const discountAmount = promoDiscount ? (totalSelectedPrice * promoDiscount) / 100 : 0;
+  const finalPrice = totalSelectedPrice - discountAmount;
 
   const allSelected = cart?.items.length ? cart.items.every((i) => i.selected) : false;
 
@@ -239,9 +277,51 @@ const CartPage: React.FC = () => {
               );
             })}
           </div>
-          <div className='border rounded p-4 w-full lg:w-64 mt-8 lg:mt-0 lg:h-[150px]'>
+          <div className='border rounded p-4 w-full lg:w-64 mt-8 lg:mt-0'>
+            <div className='mb-4'>
+              <label className='block text-sm text-gray-600 mb-2'>Промокод</label>
+              <div className='flex gap-2'>
+                <input
+                  type='text'
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  placeholder='Введите промокод'
+                  className='border rounded px-2 py-1 text-sm w-full'
+                />
+                <button
+                  onClick={handleApplyPromoCode}
+                  className='bg-secondary text-white px-3 py-1 rounded text-sm hover:bg-secondary-dark'
+                >
+                  OK
+                </button>
+              </div>
+              {promoError && <p className='text-red-500 text-xs mt-1'>{promoError}</p>}
+              {promoDiscount && (
+                <p className='text-green-600 text-xs mt-1'>Промокод применен! Скидка {promoDiscount}%</p>
+              )}
+            </div>
+
             <div className='mb-2 text-sm text-gray-600'>Выбрано товаров: {totalSelectedQuantity}</div>
-            <div className='mb-4 font-semibold text-xl'>{totalSelectedPrice}₽</div>
+
+            <div className='space-y-2 mb-4'>
+              <div className='flex justify-between text-sm'>
+                <span>Сумма:</span>
+                <span>{totalSelectedPrice}₽</span>
+              </div>
+
+              {promoDiscount && (
+                <div className='flex justify-between text-sm text-green-600'>
+                  <span>Скидка:</span>
+                  <span>-{discountAmount}₽</span>
+                </div>
+              )}
+
+              <div className='flex justify-between font-semibold text-xl'>
+                <span>Итого:</span>
+                <span>{finalPrice}₽</span>
+              </div>
+            </div>
+
             <button
               onClick={() => navigate('/checkout')}
               className='bg-secondary b-point text-white w-full py-2 rounded hover:bg-secondary-dark disabled:opacity-50 disabled:cursor-not-allowed'

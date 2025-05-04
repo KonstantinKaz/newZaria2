@@ -1,7 +1,6 @@
 import { PrismaService } from '@/prisma/prisma.service'
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { OrderStatus } from '@prisma/client'
-import { CreateOrderDto } from './dto/create-order.dto'
 
 @Injectable()
 export class OrderService {
@@ -9,19 +8,14 @@ export class OrderService {
 
 	constructor(private readonly prisma: PrismaService) {}
 
-	async getPaidOrders(userId: string) {
-		const response = this.prisma.order.findMany({
+	async getAll(userId: string) {
+		return this.prisma.order.findMany({
 			where: {
-				status: OrderStatus.PAID,
-				userId: userId
-			}
-		})
-		return response
-	}
-
-	async getOrderById(orderId: string) {
-		return this.prisma.order.findUnique({
-			where: { id: orderId },
+				userId
+			},
+			orderBy: {
+				createdAt: 'desc'
+			},
 			include: {
 				items: {
 					include: {
@@ -32,34 +26,94 @@ export class OrderService {
 		})
 	}
 
-	async createOrder(dto: CreateOrderDto, userId: string) {
+	async getByUserId(userId: string) {
+		return this.prisma.order.findMany({
+			where: {
+				userId,
+				status: OrderStatus.PAID
+			},
+			orderBy: {
+				createdAt: 'desc'
+			},
+			include: {
+				items: {
+					include: {
+						product: true
+					}
+				}
+			}
+		})
+	}
+
+	async getById(id: string) {
+		const order = await this.prisma.order.findUnique({
+			where: {
+				id
+			},
+			include: {
+				items: {
+					include: {
+						product: true
+					}
+				}
+			}
+		})
+
+		if (!order) {
+			throw new NotFoundException('Order not found')
+		}
+
+		return order
+	}
+
+	async createOrder(userId: string, email: string, promocodeId?: string) {
 		this.logger.log(
-			`Creating order for user ${userId} with items: ${dto.cartItemIds.join(', ')}`
+			`Creating order for user ${userId} ${promocodeId ? `with promocode ${promocodeId}` : ''}`
 		)
 
+		// Получаем только выбранные товары из корзины
 		const cartItems = await this.prisma.cartItem.findMany({
 			where: {
-				id: { in: dto.cartItemIds },
-				userId
+				userId,
+				selected: true
 			},
 			include: {
 				product: true
 			}
 		})
 
-		this.logger.log(`Found ${cartItems.length} cart items`)
+		this.logger.log(`Found ${cartItems.length} selected cart items`)
 
-		const total = cartItems.reduce((acc, item) => {
+		if (cartItems.length === 0) {
+			throw new NotFoundException('No selected items in cart')
+		}
+
+		let total = cartItems.reduce((acc, item) => {
 			return acc + item.product.price * item.quantity
 		}, 0)
 
-		this.logger.log(`Total order price: ${total}`)
+		this.logger.log(`Initial total: ${total}`)
+
+		// Если есть промокод, применяем скидку
+		let appliedPromocode = null
+		if (promocodeId) {
+			appliedPromocode = await this.prisma.promocode.findUnique({
+				where: { id: promocodeId }
+			})
+
+			if (appliedPromocode) {
+				this.logger.log(`Applying promocode discount: ${appliedPromocode.discount}%`)
+				const discount = (total * appliedPromocode.discount) / 100
+				total = total - discount
+				this.logger.log(`Total after discount: ${total}`)
+			}
+		}
 
 		try {
 			const order = await this.prisma.order.create({
 				data: {
 					status: OrderStatus.PENDING,
-					email: dto.email,
+					email,
 					total,
 					userId,
 					items: {
@@ -68,28 +122,43 @@ export class OrderService {
 							price: item.product.price,
 							productId: item.product.id
 						}))
-					}
+					},
+					promocodeId: appliedPromocode?.id
 				},
 				include: {
 					items: {
 						include: {
 							product: true
 						}
-					}
+					},
+					promocode: true
 				}
 			})
 
 			this.logger.log(`Order created with ID: ${order.id}`)
 
-			// Очищаем корзину после создания заказа
+			// Увеличиваем счетчик использований промокода
+			if (appliedPromocode) {
+				await this.prisma.promocode.update({
+					where: { id: appliedPromocode.id },
+					data: {
+						usedCount: {
+							increment: 1
+						}
+					}
+				})
+				this.logger.log(`Promocode usage count incremented`)
+			}
+
+			// Очищаем выбранные товары из корзины
 			await this.prisma.cartItem.deleteMany({
 				where: {
-					id: { in: dto.cartItemIds },
-					userId
+					userId,
+					selected: true
 				}
 			})
 
-			this.logger.log('Cart items removed')
+			this.logger.log('Selected cart items removed')
 
 			return order
 		} catch (error) {

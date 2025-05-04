@@ -30,6 +30,9 @@ model User {
 
   verificationToken String? @default(cuid()) @map("verification_token")
 
+  activePromocode   Promocode? @relation("ActivePromocode", fields: [activePromocodeId], references: [id])
+  activePromocodeId String?    @map("active_promocode_id")
+
   rights Role[] @default([USER])
 }
 
@@ -106,6 +109,9 @@ model Order {
 
   transaction Transaction?
 
+  promocode   Promocode? @relation(fields: [promocodeId], references: [id])
+  promocodeId String?    @map("promocode_id")
+
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String? @map("user_id")
 
@@ -148,6 +154,23 @@ model Transaction {
   userId String @map("user_id")
 
   @@map("transactions")
+}
+
+model Promocode {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  discount    Int       // Процент скидки
+  isActive    Boolean   @default(true)
+  validUntil  DateTime? // Опционально: срок действия промокода
+  maxUses     Int?      // Опционально: максимальное количество использований
+  usedCount   Int       @default(0) // Количество использований
+  description String?   // Опционально: описание промокода
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  orders      Order[]
+  activeForUsers User[] @relation("ActivePromocode")
+
+  @@map("promocodes")
 }
 
 enum OrderStatus {

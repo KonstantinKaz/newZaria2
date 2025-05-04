@@ -1,9 +1,11 @@
+import { configureStore } from '@reduxjs/toolkit';
 import { AxiosError } from 'axios';
 import { makeAutoObservable } from 'mobx';
 import { CartResponseDto } from '../models/cart/CartResponseDto';
 import { IUser } from '../models/IUser';
 import AuthService from '../services/AuthService';
 import CartService from '../services/CartService';
+import { cartActions, cartReducer } from './cart/cart.slice';
 
 class Store {
   user: IUser | null = null;
@@ -30,11 +32,37 @@ class Store {
 
   setCart(cart: CartResponseDto | null) {
     this.cart = cart;
+    // Синхронизируем с Redux store
+    if (cart) {
+      console.log('Syncing cart with Redux store:', cart);
+      // Очищаем текущую корзину в Redux
+      store.dispatch(cartActions.resetCart());
+      // Добавляем каждый товар в Redux store
+      cart.items.forEach((item) => {
+        store.dispatch(
+          cartActions.addToCart({
+            id: item.id,
+            product: item.product,
+            quantity: item.quantity,
+            selected: item.selected,
+          }),
+        );
+      });
+      // Если есть промокод, применяем его
+      if (cart.promocode) {
+        store.dispatch(cartActions.applyPromocode(cart.promocode));
+      }
+    } else {
+      // Если корзина пуста, очищаем Redux store
+      store.dispatch(cartActions.resetCart());
+    }
   }
 
   async fetchCart() {
     try {
+      console.log('Fetching cart from backend...');
       const data = await CartService.getCart();
+      console.log('Received cart data:', data);
       this.setCart(data);
     } catch (error) {
       console.error('Ошибка при загрузке корзины:', error);
@@ -124,3 +152,12 @@ class Store {
 }
 
 export default new Store();
+
+export const store = configureStore({
+  reducer: {
+    cart: cartReducer,
+  },
+});
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;

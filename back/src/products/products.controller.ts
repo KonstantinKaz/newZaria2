@@ -9,6 +9,7 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ProductsService } from './products.service';
@@ -44,6 +45,18 @@ export class ProductsController {
     @UploadedFile() file: Express.Multer.File,
     @Body() createProductDto: CreateProductDto,
   ) {
+    if (typeof createProductDto.price === 'string') {
+      createProductDto.price = Number(createProductDto.price);
+    }
+    
+    if (typeof createProductDto.categoryId === 'string') {
+      createProductDto.categoryId = Number(createProductDto.categoryId);
+    }
+    
+    if (typeof createProductDto.quantity === 'string') {
+      createProductDto.quantity = Number(createProductDto.quantity);
+    }
+    
     return this.productsService.create(createProductDto, file);
   }
 

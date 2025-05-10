@@ -5,6 +5,7 @@ import { IProductCardProps } from '../../../models/product/IProductCardProps';
 import CartService from '../../../services/CartService';
 import FavoritesService from '../../../services/FavouritesService';
 import StarRating from '../starRating';
+import { Link } from 'react-router';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -71,18 +72,18 @@ const ProductCard: FC<IProductCardProps> = ({ product }) => {
 
       {/* Изображение товара */}
       <div className='aspect-square w-full relative mb-3'>
-        <div className='absolute inset-0 flex items-center justify-center'>
+        <Link to={`/products/${product.id}`} className='absolute inset-0 flex items-center justify-center'>
           <img src={mainImage} alt={product.title} className='max-w-full max-h-full object-contain rounded-md' />
-        </div>
+        </Link>
       </div>
 
       <StarRating rating={4} />
 
       {/* Информация о товаре */}
       <div className='space-y-2'>
-        <p className='text-[16px] font-semibold truncate'>
+        <Link to={`/products/${product.id}`} className='text-[16px] font-semibold truncate block hover:text-secondary'>
           {product.title}, <span className='text-gray-500'>{displayArt}</span>
-        </p>
+        </Link>
         <div className='flex justify-between items-center flex-wrap gap-2'>
           <p className='text-[24px] font-semibold'>{product.price} ₽ / шт</p>
           <p className='text-green-600 text-sm flex items-center whitespace-nowrap'>В наличии</p>

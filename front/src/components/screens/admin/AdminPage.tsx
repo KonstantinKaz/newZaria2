@@ -91,18 +91,26 @@ const AdminPage: React.FC = () => {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('price', String(price));
-    formData.append('description', description);
-    formData.append('categoryId', String(categoryId));
-    formData.append('quantity', String(quantity));
-
-    if (imageFile) {
-      formData.append('image', imageFile);
-    }
-
     try {
+      const productData = {
+        title,
+        price: Number(price),
+        description,
+        categoryId: Number(categoryId),
+        quantity: Number(quantity),
+      };
+
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('price', price.toString());
+      formData.append('description', description);
+      formData.append('categoryId', categoryId.toString());
+      formData.append('quantity', quantity.toString());
+
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+
       await ProductService.createFormData(formData);
       setMessage('Товар успешно создан');
       setTitle('');
@@ -113,7 +121,11 @@ const AdminPage: React.FC = () => {
       setImageFile(null);
     } catch (error) {
       console.error('Ошибка при создании товара:', error);
-      setMessage('Ошибка при создании товара');
+      if (error instanceof Error) {
+        setMessage(`Ошибка при создании товара: ${error.message}`);
+      } else {
+        setMessage('Ошибка при создании товара');
+      }
     }
   };
 
@@ -145,7 +157,6 @@ const AdminPage: React.FC = () => {
         validUntil: '',
         isActive: true,
       });
-      // Обновляем список промокодов
       const { data } = await PromocodeService.getAll();
       setPromocodes(data);
     } catch (error) {
@@ -159,7 +170,6 @@ const AdminPage: React.FC = () => {
     try {
       await PromocodeService.delete(id);
       setMessage('Промокод успешно удален');
-      // Обновляем список промокодов
       const { data } = await PromocodeService.getAll();
       setPromocodes(data);
     } catch (error) {
@@ -225,7 +235,7 @@ const AdminPage: React.FC = () => {
                   type='number'
                   placeholder='Введите цену'
                   value={price}
-                  onChange={(e) => setPrice(Number(e.target.value))}
+                  onChange={(e) => setPrice(Number(e.target.value) || 0)}
                   className='w-full border p-2 rounded-md focus:ring focus:ring-red-200'
                 />
               </div>
@@ -235,7 +245,7 @@ const AdminPage: React.FC = () => {
                   type='number'
                   placeholder='Введите количество'
                   value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  onChange={(e) => setQuantity(Number(e.target.value) || 0)}
                   className='w-full border p-2 rounded-md focus:ring focus:ring-red-200'
                 />
               </div>
@@ -269,7 +279,7 @@ const AdminPage: React.FC = () => {
               <label className='block text-gray-700'>Категория:</label>
               <select
                 value={categoryId}
-                onChange={(e) => setCategoryId(Number(e.target.value))}
+                onChange={(e) => setCategoryId(parseInt(e.target.value, 10) || 0)}
                 className='w-full border p-2 rounded-md focus:ring focus:ring-red-200'
               >
                 <option value={0}>Выберите категорию</option>

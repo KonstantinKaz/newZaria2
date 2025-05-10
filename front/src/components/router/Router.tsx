@@ -18,6 +18,7 @@ import Profile from '../screens/profile/Profile';
 import Layout from '../ui/layout/Layout';
 import NotFound from './../screens/404/NotFound';
 import Home from './../screens/home/Home';
+import ProductDetail from '../screens/productDetail/ProductDetail';
 // import Login from './../screens/login/Login';
 // import AdminPage from './../screens/adminPage/AdminPage';
 
@@ -52,6 +53,7 @@ const Router = () => {
           <Route path='order-success/:orderId' element={<OrderSuccessPage />} />
           <Route path='favorites' element={<FavoritesPage />} />
           <Route path='404' element={<NotFound />} />
+          <Route path='products/:id' element={<ProductDetail />} />
         </Route>
       </Routes>
     </BrowserRouter>
